@@ -1,65 +1,500 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+
+// RSVP Modal Component
+function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const router = useRouter();
+  const [modalState, setModalState] = useState<'initial' | 'attending' | 'not-attending'>('initial');
+  const [bgImageError, setBgImageError] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    email: '',
+    message: '',
+  });
+
+  // Reset modal state when closed
+  useEffect(() => {
+    if (!isOpen) {
+      setModalState('initial');
+      setFormData({
+        fullName: '',
+        phoneNumber: '',
+        email: '',
+        message: '',
+      });
+    }
+  }, [isOpen]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Redirect to /wish-list after submission
+    router.push('/wish-list');
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Modal Background with couple's photo */}
+      <div className="absolute inset-0">
+        {!bgImageError ? (
+          <Image
+            src="/couple-background.jpg"
+            alt="Couple Background"
+            fill
+            className="object-cover"
+            quality={90}
+            onError={() => setBgImageError(true)}
+          />
+        ) : (
+          <div className="w-full h-full bg-black/50"></div>
+        )}
+        {/* Darker overlay for modal */}
+        <div className="absolute inset-0 bg-black/60"></div>
+      </div>
+      
+      {/* Modal Content */}
+      <div className="relative bg-white/95 backdrop-blur-md rounded-lg p-8 max-w-md w-full mx-4 shadow-xl border border-white/20">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-amber-900 hover:text-amber-600 text-2xl font-bold"
+          aria-label="Close modal"
+        >
+          ×
+        </button>
+        {modalState === 'initial' && (
+          <div>
+            <h2 className="text-2xl font-bold text-amber-900 mb-6 text-center">
+              Will you be attending?
+            </h2>
+            <div className="flex flex-col space-y-4">
+              <button
+                onClick={() => setModalState('attending')}
+                className="px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium"
+              >
+                I am coming
+              </button>
+              <button
+                onClick={() => setModalState('not-attending')}
+                className="px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium"
+              >
+                I am not coming
+              </button>
+            </div>
+          </div>
+        )}
+
+        {modalState === 'attending' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <h2 className="text-2xl font-bold text-amber-900 mb-6 text-center">
+              We're excited to have you!
+            </h2>
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-amber-900 mb-1">
+                Full Name
+              </label>
+              <input
+                type="text"
+                id="fullName"
+                required
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+              />
+            </div>
+            <div>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-amber-900 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                id="phoneNumber"
+                required
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-amber-900 mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium"
+            >
+              Become a Guest
+            </button>
+          </form>
+        )}
+
+        {modalState === 'not-attending' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <h2 className="text-2xl font-bold text-amber-900 mb-6 text-center">
+              We'll miss you!
+            </h2>
+            <div>
+              <label htmlFor="message" className="block text-sm font-medium text-amber-900 mb-1">
+                Goodwill Message
+              </label>
+              <textarea
+                id="message"
+                required
+                rows={4}
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+                placeholder="Share a message with us..."
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium"
+            >
+              Send Message
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
+  const [isRSVPModalOpen, setIsRSVPModalOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [bgImageError, setBgImageError] = useState(false);
+  const [herStoryImageError, setHerStoryImageError] = useState(false);
+  const [hisStoryImageError, setHisStoryImageError] = useState(false);
+  const [galleryImageErrors, setGalleryImageErrors] = useState<Set<number>>(new Set());
+
+  // Handle hash-based scrolling on page load
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const element = document.getElementById(hash.substring(1));
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  }, []);
+
+  // Handle gallery image errors
+  const handleGalleryImageError = (imageNumber: number) => {
+    setGalleryImageErrors((prev) => new Set(prev).add(imageNumber));
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen relative">
+      {/* Background Image */}
+      <div className="fixed inset-0 z-0">
+        {!bgImageError ? (
+          <Image
+            src="/couple-background.jpg"
+            alt="Couple Background"
+            fill
+            className="object-cover"
+            priority
+            quality={90}
+            onError={() => setBgImageError(true)}
+          />
+        ) : null}
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-sm"></div>
+      </div>
+      
+      {/* Content with relative positioning */}
+      <div className="relative z-10">
+      {/* Home Section */}
+      <section id="home" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center bg-white/60 backdrop-blur-sm rounded-lg p-8 shadow-lg">
+          <h1 className="text-4xl font-bold text-amber-900 mb-4">
+            Welcome to Our Wedding Celebration
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-lg text-amber-800 max-w-2xl mx-auto">
+            We're so excited to share this special day with you.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* Invitation Image & RSVP Section */}
+      <section id="rsvp" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-8 shadow-lg">
+          <div className="text-center">
+            {/* Wedding Invitation Card */}
+            <div className="max-w-md mx-auto mb-8">
+              <div className="aspect-[3/4] relative rounded-lg overflow-hidden shadow-lg bg-amber-50 border-2 border-amber-900/20">
+                {!imageError ? (
+                  <Image
+                    src="/wedding-invitation.jpg.jpeg"
+                    alt="Wedding Invitation Card"
+                    fill
+                    className="object-contain"
+                    priority
+                    sizes="(max-width: 768px) 100vw, 448px"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                    <p className="text-amber-700 text-sm mb-2">Please save your wedding invitation image as:</p>
+                    <p className="text-amber-900 font-semibold">wedding-invitation.jpg.jpeg</p>
+                    <p className="text-amber-700 text-xs mt-2">in the <code className="bg-amber-100 px-1 rounded">public</code> folder</p>
+                    <p className="text-amber-600 text-xs mt-4">Supported formats: .jpg, .jpeg, .png, .webp</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* RSVP Button */}
+            <button
+              onClick={() => setIsRSVPModalOpen(true)}
+              className="px-8 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium text-lg shadow-lg"
+            >
+              RSVP
+            </button>
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Our Story Section */}
+      <section id="our-story" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-8 shadow-lg">
+          <div className="text-center mb-16">
+            <h1 className="text-4xl font-bold text-amber-900 mb-4">Our Story</h1>
+            <p className="text-lg text-amber-800 max-w-2xl mx-auto">
+              The journey that brought us together
+            </p>
+          </div>
+
+          <div className="max-w-6xl mx-auto space-y-20">
+            {/* Her Story Section */}
+            <div className="flex flex-col lg:flex-row gap-8 items-start">
+              {/* Her Story Image */}
+              <div className="w-full lg:w-1/2 lg:sticky lg:top-24">
+                <div className="w-full aspect-[4/3] relative rounded-lg overflow-hidden shadow-lg bg-amber-50 border-2 border-amber-200">
+                  {!herStoryImageError ? (
+                    <Image
+                      src="/herstory.jpeg"
+                      alt="Her Story"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      onError={() => setHerStoryImageError(true)}
+                      priority
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
+                      <p className="text-amber-600 text-sm italic">Please add herstory.jpeg to the public folder</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Her Story Content */}
+              <div className="w-full lg:w-1/2 space-y-6 text-amber-900">
+                <h2 className="text-3xl font-bold text-amber-900 mb-4">Her Story</h2>
+                <h3 className="text-2xl font-semibold text-amber-800 mb-4">
+                  Finding My Forever Home: The Best Deal of My Life
+                </h3>
+                
+                <p className="text-base leading-relaxed">
+                  It started as just another high-pressure day at work. My boss had sent me out with a clear mission: find a client, close a sale, and don't come back empty-handed. I headed to the "Big 5" event, my mind purely on business, until I saw him. He was standing there—quiet, attentive, and carrying a presence that made the crowded room feel still.
+                </p>
+
+                <p className="text-base leading-relaxed">
+                  What began as a professional pitch about real estate quickly turned into a beautiful twist of fate. I realized he wasn't just any prospect; he was the brother-in-law of my dear friend, Aisha. As he told me about his life—his move back from Cyprus and his dreams for the future—I found myself captivated not just by his brilliance, but by how easily I could talk to him. I teased him, saying that the only way to keep my attention was to become my client.
+                </p>
+
+                <p className="text-base leading-relaxed">
+                  He didn't just buy the property; he chose to invest in us. The very next day, he closed the deal. But as we moved from the office to our first "tropical date," I realized the true irony of my job. I had spent my day trying to sell someone a piece of land, only to realize that I was the one who had finally found a home—not in a building, but in him. From the soft sands of the beach to a starlit dinner at Mud Lagos, everything felt perfectly aligned.
+                </p>
+
+                <p className="text-base leading-relaxed">
+                  By our third day together, sitting by the ocean, he asked me to be his. I played hard to get, telling him I'd "think about it," but my heart had already signed the contract. That night, a wave of peace washed over me. I felt those unmistakable goosebumps, the kind that only come when God whispers, "This is the one." I didn't need to go home to think about it, because I was already there. The next morning, I said "yes" to the best deal I've ever made: a lifetime of love with my soulmate.
+                </p>
+              </div>
+            </div>
+
+            {/* His Story Section */}
+            <div className="flex flex-col lg:flex-row-reverse gap-8 items-start">
+              {/* His Story Image */}
+              <div className="w-full lg:w-1/2 lg:sticky lg:top-24">
+                <div className="w-full aspect-[4/3] relative rounded-lg overflow-hidden shadow-lg bg-amber-50 border-2 border-amber-200">
+                  {!hisStoryImageError ? (
+                    <Image
+                      src="/hisstoy.jpeg"
+                      alt="His Story"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      onError={() => setHisStoryImageError(true)}
+                      priority
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
+                      <p className="text-amber-600 text-sm italic">Please add hisstoy.jpeg to the public folder</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* His Story Content */}
+              <div className="w-full lg:w-1/2 space-y-6 text-amber-900">
+                <h2 className="text-3xl font-bold text-amber-900 mb-4">His Story</h2>
+                <h3 className="text-2xl font-semibold text-amber-800 mb-4">
+                  The Taste of Forever: Finding My Home in You
+                </h3>
+                
+                <p className="text-base leading-relaxed">
+                  I walked into that event with my mind on the future, recently back from Cyprus and looking for where to plant my roots in Nigeria. I wasn't looking for love; I was looking for an opportunity. Then I saw her. She was pitching me land with such passion and brilliance that I found myself captivated by the messenger more than the message. When I discovered she was a dear friend of my sister-in-law, Aisha, the coincidence felt like a sign.
+                </p>
+
+                <p className="text-base leading-relaxed">
+                  I'll be honest. I started out thinking I would just "chop and go." I wanted a taste of the land she was selling, a quick business transaction to move my plans forward. She even teased me, saying I had to be her client to keep her attention, so I closed the deal the very next day. I thought I was just buying property, but that first "taste" of her spirit, her wit, and her heart got stuck in my taste buds. What I thought would be a brief encounter left a flavor of peace and joy that I knew I could never live without.
+                </p>
+
+                <p className="text-base leading-relaxed">
+                  By our third day, as we sat by the ocean on our "tropical date," the business of land was far behind us. While I had purchased a piece of the earth to build on, I realized that she had become the sanctuary I was truly searching for. That night at the beach, I felt this wasn't just a moment, but a destiny.
+                </p>
+
+                <p className="text-base leading-relaxed">
+                  I didn't just want a taste anymore; I wanted the whole lifetime. When she said "yes" to me the next morning, I knew I had made the most successful investment of my life. I didn't just buy land; I found the home I will cherish forever.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Events Section */}
+      <section id="events" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-8 shadow-lg">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-amber-900 mb-4">Events</h1>
+            <p className="text-lg text-amber-800 max-w-2xl mx-auto">
+              Join us for our celebration
+            </p>
+          </div>
+          <div className="max-w-3xl mx-auto space-y-8">
+            <div className="border border-amber-900/20 rounded-lg p-6 bg-white/80">
+              <h2 className="text-2xl font-semibold text-amber-900 mb-4">Engagement</h2>
+              <div className="space-y-2">
+                <p className="text-amber-800">
+                  <span className="font-medium">Date:</span> May 2nd
+                </p>
+                <p className="text-amber-800">
+                  <span className="font-medium">Time:</span> 12:00 PM
+                </p>
+                <p className="text-amber-800">
+                  <span className="font-medium">Location:</span> HIS GRACE EVENT CENTER, beside Jubilee Baptist Church, Ring Road, Osogbo, Osun State
+                </p>
+              </div>
+            </div>
+            <div className="border border-amber-900/20 rounded-lg p-6 bg-white/80">
+              <h2 className="text-2xl font-semibold text-amber-900 mb-4">Reception</h2>
+              <div className="space-y-2">
+                <p className="text-amber-800">
+                  <span className="font-medium">Date:</span> May 2nd
+                </p>
+                <p className="text-amber-800">
+                  <span className="font-medium">Time:</span> 3:00 PM
+                </p>
+                <p className="text-amber-800">
+                  <span className="font-medium">Location:</span> HIS GRACE EVENT CENTER, beside Jubilee Baptist Church, Ring Road, Osogbo, Osun State
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery Section */}
+      <section id="gallery" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-8 shadow-lg">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-amber-900 mb-4">Gallery</h1>
+            <p className="text-lg text-amber-800 max-w-2xl mx-auto">
+              Our favorite moments together
+            </p>
+          </div>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 28 }, (_, i) => i + 1).map((imageNumber) => (
+                <div
+                  key={imageNumber}
+                  className="aspect-square relative rounded-lg overflow-hidden shadow-md bg-amber-50 border border-amber-900/20 hover:shadow-lg transition-shadow"
+                >
+                  {!galleryImageErrors.has(imageNumber) ? (
+                    <Image
+                      src={`/PIC${imageNumber}.jpeg`}
+                      alt={`Gallery Image ${imageNumber}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      loading="lazy"
+                      onError={() => handleGalleryImageError(imageNumber)}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
+                      <p className="text-amber-600 text-xs">
+                        PIC{imageNumber}.jpeg
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-8 shadow-lg">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-amber-900 mb-4">Contact Us</h1>
+            <p className="text-lg text-amber-800 max-w-2xl mx-auto">
+              Get in touch with us
+            </p>
+          </div>
+          <div className="max-w-2xl mx-auto">
+            <div className="border border-amber-900/20 rounded-lg p-8 space-y-4 bg-white/80">
+              <div>
+                <h2 className="text-xl font-semibold text-amber-900 mb-2">Email</h2>
+                <p className="text-amber-800">contact@example.com</p>
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-amber-900 mb-2">Phone</h2>
+                <p className="text-amber-800">Contact information coming soon</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* RSVP Modal */}
+      <RSVPModal 
+        isOpen={isRSVPModalOpen} 
+        onClose={() => {
+          setIsRSVPModalOpen(false);
+        }} 
+      />
+      </div>
     </div>
   );
 }
