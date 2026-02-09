@@ -1,12 +1,12 @@
 # Copilot Instructions for DoubleOExperience
 
 ## Project Overview
-DoubleOExperience is a **Next.js 16 wedding website** built with React 19, TypeScript, and Tailwind CSS. It's a client-side heavy application celebrating a wedding with sections for event details, photo galleries, RSVPs, and a gift wish list.
+DoubleOExperience is a **Next.js 14 wedding website** built with React 18, TypeScript, and Tailwind CSS. It's a client-side heavy application celebrating a wedding with sections for event details, photo galleries, RSVPs, and a gift wish list.
 
 ### Tech Stack
-- **Framework**: Next.js 16.1.1 with App Router
-- **React**: Version 19.2.3 with hooks-based components
-- **Styling**: Tailwind CSS 4 with PostCSS, amber color palette
+- **Framework**: Next.js 14.2.5 with App Router
+- **React**: Version 18.2.0 with hooks-based components
+- **Styling**: Tailwind CSS 4 with PostCSS, Inter font family
 - **Type Safety**: TypeScript 5 with strict mode enabled
 - **Image Optimization**: Next.js `<Image>` component with error handling
 - **Tooling**: ESLint 9 with Next.js core-web-vitals config
@@ -34,7 +34,7 @@ app/
 - **Home page** (`page.tsx`, 501 lines): Largest file, contains 8+ sections with sticky sections, gallery (28 images), forms, and embedded RSVP modal
 - **Wish List page** (`wish-list/page.tsx`, 238 lines): 13-item gift list with account copy-to-clipboard functionality
 - **Other pages**: Minimal SSR-only pages (Contact, Events, Gallery, RSVP dedicated page)
-- **Layout** (`layout.tsx`, 34 lines): Root wrapper with Geist fonts, flex column for sticky footer
+- **Layout** (`layout.tsx`, 29 lines): Root wrapper with Inter font, flex column for sticky footer
 
 ### Critical Design Decisions
 
@@ -43,7 +43,7 @@ app/
 - **Dedicated routes** for `/events`, `/rsvp`, `/gallery`, `/wish-list`, `/contact`, `/our-story`
 - Navigation intelligently handles both: if clicking a section link from another page, it redirects to `/#section-id`
 - See [Navigation.tsx](app/components/Navigation.tsx#L34-L50) for the navigation logic that distinguishes routes vs. sections
-- **Navigation data structure** (line 8-16): Each nav item has `label`, `href`, `sectionId`, and `isRoute` flag
+- **Navigation data structure** (line 7-13): Each nav item has `label`, `href`, `sectionId`, and `isRoute` flag
 
 #### 2. **Client-Side Rendering with Hydration Safety**
 - Pages use `'use client'` directive for interactive state ([page.tsx](app/page.tsx#L1), [Navigation.tsx](app/components/Navigation.tsx#L1), [wish-list](app/wish-list/page.tsx#L1))
@@ -53,7 +53,7 @@ app/
 
 #### 3. **Layout Structure & Sticky Footer**
 - [layout.tsx](app/layout.tsx) wraps all pages with:
-  - Google Fonts (Geist and Geist Mono) via CSS variables
+  - Google Fonts (Inter) via `next/font/google`
   - Navigation component at top (sticky, z-50)
   - Main content area with `flex-1` to expand
   - Footer component at bottom
@@ -129,11 +129,11 @@ npm run lint      # Run ESLint on all files
 ## Project-Specific Conventions
 
 ### Styling Conventions
-- **Color Palette**: Uses amber tones (`amber-900`, `amber-100` in [Footer.tsx](app/components/Footer.tsx)) for wedding aesthetic throughout
-- **Layout**: Max-width container pattern with `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` for responsive padding
-- **Flexbox Base**: Body uses `flex flex-col min-h-screen` to ensure footer sticks to bottom
+- **Font**: Inter font family (imported from Google Fonts in layout)
+- **Color Palette**: Neutral tones with `text-amber-900` accents for wedding aesthetic (see [Footer.tsx](app/components/Footer.tsx))
+- **Layout**: Responsive flexbox containers, `min-h-screen` for full-height pages
 - **Modals**: Use `fixed inset-0 z-50` with overlay patterns (`bg-black/60`) for proper layering
-- **Sections**: Wrapped in `bg-white/60 backdrop-blur-sm` for semi-transparent effect over background image
+- **Tailwind Config**: Uses Tailwind CSS 4 with PostCSS, no custom colors needed
 
 ### State Management
 - **Local state only**: `useState` for UI interactions (modals, menu toggles, form data, image errors)

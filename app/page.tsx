@@ -1,14 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { submitRSVP } from './utils/rsvp';
 
 // RSVP Modal Component
 function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const router = useRouter();
-  const [modalState, setModalState] = useState<'initial' | 'attending' | 'not-attending'>('initial');
+  const isMountedRef = useRef(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [modalState, setModalState] = useState<'initial' | 'attending' | 'not-attending' | 'success' | 'error'>('initial');
   const [bgImageError, setBgImageError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState({
     fullName: '',
     phoneNumber: '',
@@ -16,9 +21,22 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
     message: '',
   });
 
-  // Reset modal state when closed
+  // Track mounted state and cleanup on unmount
   useEffect(() => {
-    if (!isOpen) {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Cleanup timeout if component unmounts
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
       setModalState('initial');
       setFormData({
         fullName: '',
@@ -26,13 +44,72 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
         email: '',
         message: '',
       });
+      setErrorMessage('');
+      setIsSubmitting(false);
+      // Clear any existing timeout when modal opens
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Redirect to /wish-list after submission
-    router.push('/wish-list');
+    if (!isMountedRef.current || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      const response = await submitRSVP({
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        email: formData.email,
+        message: formData.message,
+        status: modalState === 'attending' ? 'attending' : 'not-attending',
+      });
+
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) {
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (response.success) {
+        // Update state - React will batch these updates
+        setIsSubmitting(false);
+        setModalState('success');
+        
+        // Clear any existing timeout
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        
+        // Navigate after showing success state
+        timeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            router.push('/wish-list');
+          }
+        }, 2000);
+      } else {
+        setIsSubmitting(false);
+        setErrorMessage(response.error || 'Failed to submit RSVP');
+        setModalState('error');
+      }
+    } catch (error) {
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) {
+        setIsSubmitting(false);
+        return;
+      }
+      
+      console.error('RSVP submission error:', error);
+      setIsSubmitting(false);
+      setErrorMessage('An unexpected error occurred. Please try again.');
+      setModalState('error');
+    }
   };
 
   if (!isOpen) return null;
@@ -59,13 +136,16 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
       
       {/* Modal Content */}
       <div className="relative bg-white/95 backdrop-blur-md rounded-lg p-8 max-w-md w-full mx-4 shadow-xl border border-white/20">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-amber-900 hover:text-amber-600 text-2xl font-bold"
-          aria-label="Close modal"
-        >
-          ×
-        </button>
+        {modalState !== 'success' && (
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="absolute top-4 right-4 text-amber-900 hover:text-amber-600 text-2xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Close modal"
+          >
+            ×
+          </button>
+        )}
         {modalState === 'initial' && (
           <div>
             <h2 className="text-2xl font-bold text-amber-900 mb-6 text-center">
@@ -93,6 +173,11 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
             <h2 className="text-2xl font-bold text-amber-900 mb-6 text-center">
               We're excited to have you!
             </h2>
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-300 rounded text-red-700 text-sm">
+                {errorMessage}
+              </div>
+            )}
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-amber-900 mb-1">
                 Full Name
@@ -103,7 +188,8 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                 required
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900 disabled:bg-gray-100"
               />
             </div>
             <div>
@@ -116,7 +202,8 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                 required
                 value={formData.phoneNumber}
                 onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900 disabled:bg-gray-100"
               />
             </div>
             <div>
@@ -129,14 +216,16 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900 disabled:bg-gray-100"
               />
             </div>
             <button
               type="submit"
-              className="w-full px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium"
+              disabled={isSubmitting}
+              className="w-full px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Become a Guest
+              {isSubmitting ? 'Submitting...' : 'Become a Guest'}
             </button>
           </form>
         )}
@@ -146,6 +235,11 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
             <h2 className="text-2xl font-bold text-amber-900 mb-6 text-center">
               We'll miss you!
             </h2>
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-300 rounded text-red-700 text-sm">
+                {errorMessage}
+              </div>
+            )}
             <div>
               <label htmlFor="message" className="block text-sm font-medium text-amber-900 mb-1">
                 Goodwill Message
@@ -156,17 +250,56 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                 rows={4}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900"
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900 disabled:bg-gray-100"
                 placeholder="Share a message with us..."
               />
             </div>
             <button
               type="submit"
-              className="w-full px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium"
+              disabled={isSubmitting}
+              className="w-full px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Send Message
+              {isSubmitting ? 'Submitting...' : 'Send Message'}
             </button>
           </form>
+        )}
+
+        {modalState === 'success' && (
+          <div className="text-center space-y-4">
+            <div className="text-5xl mb-4">✓</div>
+            <h2 className="text-2xl font-bold text-amber-900 mb-2">
+              Thank you!
+            </h2>
+            <p className="text-amber-800">
+              Your RSVP has been submitted successfully. We look forward to seeing you!
+            </p>
+            <p className="text-sm text-amber-700">
+              Redirecting to wish list...
+            </p>
+          </div>
+        )}
+
+        {modalState === 'error' && (
+          <div className="text-center space-y-4">
+            <div className="text-5xl mb-4 text-red-600">✕</div>
+            <h2 className="text-2xl font-bold text-amber-900 mb-2">
+              Submission Failed
+            </h2>
+            <p className="text-amber-800 mb-4">
+              {errorMessage}
+            </p>
+            <button
+              onClick={() => {
+                setModalState('attending');
+                setErrorMessage('');
+                setIsSubmitting(false);
+              }}
+              className="w-full px-6 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors font-medium"
+            >
+              Try Again
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -473,14 +606,46 @@ export default function Home() {
             </p>
           </div>
           <div className="max-w-2xl mx-auto">
-            <div className="border border-amber-900/20 rounded-lg p-8 space-y-4 bg-white/80">
-              <div>
-                <h2 className="text-xl font-semibold text-amber-900 mb-2">Email</h2>
-                <p className="text-amber-800">contact@example.com</p>
+            <div className="border border-amber-900/20 rounded-lg p-8 space-y-6 bg-white/80">
+              <div className="flex items-center gap-4">
+                <span className="text-3xl" aria-hidden="true">📧</span>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold text-amber-900 mb-1">Email</h2>
+                  <a 
+                    href="mailto:fasasi.jumat@gmail.com" 
+                    className="text-amber-800 hover:text-amber-600 hover:underline transition-colors text-lg"
+                  >
+                    fasasi.jumat@gmail.com
+                  </a>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-amber-900 mb-2">Phone</h2>
-                <p className="text-amber-800">Contact information coming soon</p>
+              
+              <div className="flex items-center gap-4">
+                <span className="text-3xl" aria-hidden="true">📞</span>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold text-amber-900 mb-1">Phone</h2>
+                  <a 
+                    href="tel:+2349033141385" 
+                    className="text-amber-800 hover:text-amber-600 hover:underline transition-colors text-lg"
+                  >
+                    +2349033141385
+                  </a>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <span className="text-3xl" aria-hidden="true">💬</span>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold text-amber-900 mb-1">WhatsApp</h2>
+                  <a 
+                    href="https://wa.me/2349033141385" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-800 hover:text-amber-600 hover:underline transition-colors text-lg"
+                  >
+                    +2349033141385
+                  </a>
+                </div>
               </div>
             </div>
           </div>
