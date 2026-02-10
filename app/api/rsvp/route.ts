@@ -12,23 +12,34 @@ interface RSVPSubmission {
 
 // Validate required fields
 function validateRSVP(data: Record<string, unknown>): { valid: boolean; error?: string } {
+  const status = data.status as string;
+  const isNotAttending = status === 'not-attending';
+  
+  // Full name is always required
   if (!data.fullName?.toString().trim()) {
     return { valid: false, error: 'Full name is required' };
   }
-  if (!data.phoneNumber?.toString().trim()) {
-    return { valid: false, error: 'Phone number is required' };
+  
+  // For attending, phone and email are required
+  if (!isNotAttending) {
+    if (!data.phoneNumber?.toString().trim()) {
+      return { valid: false, error: 'Phone number is required' };
+    }
+    if (!data.email?.toString().trim()) {
+      return { valid: false, error: 'Email address is required' };
+    }
+    // Basic email validation for attending
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email?.toString() || '')) {
+      return { valid: false, error: 'Invalid email address' };
+    }
   }
-  if (!data.email?.toString().trim()) {
-    return { valid: false, error: 'Email address is required' };
-  }
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(data.email?.toString() || '')) {
-    return { valid: false, error: 'Invalid email address' };
-  }
-  if (data.status === 'not-attending' && !data.message?.toString().trim()) {
+  
+  // For not-attending, message is required
+  if (isNotAttending && !data.message?.toString().trim()) {
     return { valid: false, error: 'Message is required' };
   }
+  
   return { valid: true };
 }
 
@@ -75,10 +86,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare RSVP submission
+    const isNotAttending = body.status === 'not-attending';
     const rsvpSubmission: RSVPSubmission = {
       fullName: body.fullName.trim(),
-      phoneNumber: body.phoneNumber.trim(),
-      email: body.email.trim(),
+      // For not-attending, send "N/A" to satisfy Google Apps Script validation
+      // If script validation is updated (see RSVP_SETUP.md), empty strings will also work
+      phoneNumber: isNotAttending ? 'N/A' : (body.phoneNumber?.trim() || ''),
+      email: isNotAttending ? 'N/A' : (body.email?.trim() || ''),
       message: body.message?.trim() || '',
       status: body.status,
       submittedAt: new Date().toISOString(),

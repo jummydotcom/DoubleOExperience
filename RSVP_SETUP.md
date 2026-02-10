@@ -65,10 +65,29 @@ function doPost(e) {
     // Parse the incoming JSON data
     const payload = JSON.parse(e.postData.contents);
 
-    // Validate required fields
-    if (!payload.fullName || !payload.email || !payload.phoneNumber) {
+    // Validate required fields based on status
+    const isNotAttending = payload.status === "not-attending";
+    
+    // Full name is always required
+    if (!payload.fullName) {
       return ContentService.createTextOutput(
-        JSON.stringify({ success: false, error: "Missing required fields" })
+        JSON.stringify({ success: false, error: "Full name is required" })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // For attending, email and phone are required
+    if (!isNotAttending) {
+      if (!payload.email || !payload.phoneNumber) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, error: "Email and phone number are required for attending" })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    
+    // For not-attending, message is required
+    if (isNotAttending && !payload.message) {
+      return ContentService.createTextOutput(
+        JSON.stringify({ success: false, error: "Message is required for not-attending" })
       ).setMimeType(ContentService.MimeType.JSON);
     }
 

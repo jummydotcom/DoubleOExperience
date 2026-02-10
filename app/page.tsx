@@ -61,13 +61,15 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
     setIsSubmitting(true);
     setErrorMessage('');
 
+    const isAttending = modalState === 'attending';
+    
     try {
       const response = await submitRSVP({
         fullName: formData.fullName,
-        phoneNumber: formData.phoneNumber,
-        email: formData.email,
+        phoneNumber: isAttending ? formData.phoneNumber : '',
+        email: isAttending ? formData.email : '',
         message: formData.message,
-        status: modalState === 'attending' ? 'attending' : 'not-attending',
+        status: isAttending ? 'attending' : 'not-attending',
       });
 
       // Check if component is still mounted before updating state
@@ -240,6 +242,21 @@ function RSVPModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                 {errorMessage}
               </div>
             )}
+            <div>
+              <label htmlFor="fullNameNotAttending" className="block text-sm font-medium text-amber-900 mb-1">
+                Full Name
+              </label>
+              <input
+                type="text"
+                id="fullNameNotAttending"
+                required
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 border border-amber-900/20 rounded focus:outline-none focus:ring-2 focus:ring-amber-600 text-amber-900 disabled:bg-gray-100"
+                placeholder="Enter your full name"
+              />
+            </div>
             <div>
               <label htmlFor="message" className="block text-sm font-medium text-amber-900 mb-1">
                 Goodwill Message
