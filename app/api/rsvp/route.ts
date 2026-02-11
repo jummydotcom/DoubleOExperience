@@ -52,23 +52,42 @@ async function sendToGoogleSheet(rsvpData: RSVPSubmission): Promise<void> {
     return;
   }
 
+  const doFetch = async (): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s for cold start
+    try {
+      const res = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'NextJS-RSVP/1.0',
+        },
+        body: JSON.stringify(rsvpData),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return res;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw e;
+    }
+  };
+
   try {
-    // Fire and forget - don't wait for response
-    // This prevents timeout issues while still saving data
-    fetch(scriptUrl, {
-      method: 'POST',
-      mode: 'no-cors', // Google Apps Script requires no-cors mode
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(rsvpData),
-    }).catch((error) => {
-      // Log error but don't block the response
-      console.error('Error sending RSVP to Google Sheet (background):', error);
-    });
+    try {
+      await doFetch();
+    } catch (firstError) {
+      // Retry once on connection errors (e.g. "other side closed", cold start)
+      const msg = firstError instanceof Error ? firstError.message + (firstError.cause ? ` ${String(firstError.cause)}` : '') : String(firstError);
+      if (msg.includes('closed') || msg.includes('fetch failed') || (firstError instanceof Error && firstError.name === 'AbortError')) {
+        await new Promise((r) => setTimeout(r, 2000));
+        await doFetch();
+      } else {
+        throw firstError;
+      }
+    }
   } catch (error) {
-    // Log error but don't block the response
-    console.error('Error initiating Google Sheet submission:', error);
+    console.error('Error sending RSVP to Google Sheet (background):', error);
   }
 }
 
