@@ -117,18 +117,18 @@ export async function POST(request: NextRequest) {
       submittedAt: new Date().toISOString(),
     };
 
-    // Send to Google Sheet in the background (non-blocking)
-    // This prevents timeout issues - we return success immediately
-    // and let Google Sheets save happen asynchronously
-    sendToGoogleSheet(rsvpSubmission).catch((error) => {
-      console.error('Background Google Sheet submission error:', error);
-    });
+    // Await the Google Sheets submission before responding
+    // (On serverless platforms, fire-and-forget calls get killed when the response is sent)
+    try {
+      await sendToGoogleSheet(rsvpSubmission);
+    } catch (error) {
+      console.error('Google Sheet submission error:', error);
+    }
 
-    // Return success immediately - Google Sheets will save in background
     return NextResponse.json(
-      { 
-        success: true, 
-        message: 'RSVP submitted successfully!' 
+      {
+        success: true,
+        message: 'RSVP submitted successfully!'
       },
       { status: 200 }
     );
